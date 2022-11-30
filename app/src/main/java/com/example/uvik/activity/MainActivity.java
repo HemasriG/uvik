@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
@@ -21,6 +22,7 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -59,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
     Geocoder geocoder;
     List<Address> addresses;
     String code;
+    TextView errorMsg;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         locationText = (TextView) findViewById(R.id.location_text);
         recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         noDataL = (LinearLayout)findViewById(R.id.no_data_l);
+        errorMsg = (TextView)findViewById(R.id.error_msg);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.addItemDecoration(new DividerItemDecoration(this,DividerItemDecoration.VERTICAL));
         getLocation();
@@ -83,6 +87,15 @@ public class MainActivity extends AppCompatActivity {
         }
         location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         geocoder= new Geocoder(this);
+        try {
+            addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 10);
+            Address address = addresses.get(0);
+            Log.d("postalCode",address.getPostalCode());
+            String postalCode = address.getPostalCode();
+            getData(postalCode);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -114,33 +127,30 @@ public class MainActivity extends AppCompatActivity {
 
     private void getData(String postalCode) {
         Service service = ApiModule.getInstance().getService();
-        service.getRepresentativesResponse("AIzaSyDnddIYAHiLmG4jrGp44KkFt6cLZhpizn4","10002").enqueue(new Callback<GetResponse>() {
+        //"10002"
+        String key = "AIzaSyDnddIYAHiLmG4jrGp44KkFt6cLZhpizn4";
+        service.getRepresentativesResponse(key,postalCode).enqueue(new Callback<GetResponse>() {
             @Override
             public void onResponse(Call<GetResponse> call, Response<GetResponse> response) {
-                if (response.isSuccessful()){
-                    if (response.code()==200) {
-                        if (response.body() != null) {
-                            getResponse = response.body();
-                            updateView(getResponse.getNormalizedInput());
-                            setAdapter(getResponse);
-                        }
-                    }else if (response.code()==400||response.code()==403){
-                        Toast.makeText(MainActivity.this, response.errorBody().toString(), Toast.LENGTH_SHORT).show();
-                        noDataL.setVisibility(View.VISIBLE);
-                    }
+                if (response.body() != null) {
+                    getResponse = response.body();
+                    updateView(getResponse.getNormalizedInput());
+                    setAdapter(getResponse);
+                    errorMsg.setVisibility(View.GONE);
+                }else{
+                    errorMsg.setVisibility(View.VISIBLE);
                 }
             }
 
             @Override
             public void onFailure(Call<GetResponse> call, Throwable t) {
-                Toast.makeText(getApplicationContext(),"Failed to connect server",Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(),"Failed to connect server",Toast.LENGTH_SHORT).show();
                 noDataL.setVisibility(View.VISIBLE);
             }
         });
     }
 
     private void setAdapter(GetResponse response) {
-
         List<MainModelData> modelDataList = new ArrayList<>();
         for (int j=0;j<response.getOffices().size();j++){
             if (response.getOffices().get(j).getOfficialIndices()!=null&&response.getOffices().get(j).getOfficialIndices().size()>0){
@@ -161,11 +171,11 @@ public class MainActivity extends AppCompatActivity {
         }
         if (modelDataList!=null&&modelDataList.size()>0) {
             recyclerView.setVisibility(View.VISIBLE);
-            noDataL.setVisibility(View.GONE);
+            errorMsg.setVisibility(View.GONE);
             mainAdapter = new MainAdapter(this, modelDataList,response);
             recyclerView.setAdapter(mainAdapter);
         }else{
-            noDataL.setVisibility(View.VISIBLE);
+            errorMsg.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
         }
     }
@@ -208,10 +218,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void openAlertDialog() {
         final Dialog dialog = new Dialog(MainActivity.this);
-        dialog.setContentView(R.layout.dialog);
-        EditText editText = (EditText) findViewById(R.id.zip);
-        TextView cancel = (TextView) findViewById(R.id.btn_cancel);
-        TextView ok = (TextView) findViewById(R.id.btn_ok);
+        LayoutInflater li = (LayoutInflater)this.getLayoutInflater();
+        View view = li.inflate(R.layout.dialog, null);
+        dialog.setContentView(view);
+        EditText editText = (EditText) view.findViewById(R.id.zip);
+        TextView cancel = (TextView) view.findViewById(R.id.btn_cancel);
+        TextView ok = (TextView) view.findViewById(R.id.btn_ok);
         cancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -223,10 +235,14 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 code = editText.getText().toString();
-                if (!code.equals(""))
+                if (!code.equals("")) {
                     getData(code);
+                    dialog.dismiss();
+                }
+
             }
         });
+        dialog.create();
         dialog.setCancelable(false);
         dialog.show();
     }

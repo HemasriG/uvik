@@ -11,9 +11,9 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/launcher"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.Uvik"
@@ -21,6 +21,7 @@
         <activity
             android:name=".activity.AboutActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Uvik.NoActionBar">
             <meta-data
                 android:name="android.app.lib_name"
@@ -29,13 +30,13 @@
         <activity
             android:name=".activity.PhotoDetailActivity"
             android:exported="false"
-            android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+            android:configChanges="orientation|screenSize"
             android:theme="@style/Theme.Uvik.NoActionBar" >
         </activity>
         <activity
             android:name=".activity.OfficialActivity"
             android:exported="false"
-            android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+            android:configChanges="orientation|screenSize"
             android:theme="@style/Theme.Uvik.NoActionBar" >
             <meta-data
                 android:name="android.app.lib_name"
@@ -44,12 +45,14 @@
         <activity
             android:name=".activity.MainActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Uvik.NoActionBar" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
     </application>
 
 </manifest>

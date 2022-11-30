@@ -11,6 +11,7 @@ import android.util.Log;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.uvik.R;
 import com.example.uvik.model.GetResponse;
@@ -47,6 +48,11 @@ public class PhotoDetailActivity extends AppCompatActivity {
             modelData = (MainModelData) getIntent().getSerializableExtra("modelData");
             photoUrl = getIntent().getStringExtra("pic");
         }
+        if (savedInstanceState!=null){
+            data = (GetResponse) savedInstanceState.getSerializable("data");
+            modelData = (MainModelData) savedInstanceState.getSerializable("modelData");
+            photoUrl = savedInstanceState.getString("pic");
+        }
         updateView(data,modelData,photoUrl);
     }
 
@@ -67,6 +73,24 @@ public class PhotoDetailActivity extends AppCompatActivity {
                     .placeholder(R.drawable.placeholder)
                     .into(imageView);
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putSerializable("data",data);
+        outState.putSerializable("modelData",modelData);
+        outState.putSerializable("photoUrl",photoUrl);
+        Toast.makeText(this, outState.get("photoUrl").toString(), Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        data = (GetResponse) savedInstanceState.getSerializable("data");
+        modelData = (MainModelData) savedInstanceState.getSerializable("modelData");
+        photoUrl = savedInstanceState.getString("pic");
+        updateView(data,modelData,photoUrl);
     }
 
     @Override

@@ -68,4 +68,14 @@
             android:text="Data cannot be accessed/loaded without internet connection"
             />
     </LinearLayout>
+    <TextView
+        android:id="@+id/error_msg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="130dp"
+        android:textColor="@color/black"
+        android:textSize="20sp"
+        android:visibility="gone"
+        android:text="No information available for this address"/>
 </LinearLayout>

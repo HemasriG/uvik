@@ -1,6 +1,7 @@
 package com.example.uvik.activity;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
@@ -25,6 +26,7 @@ import com.example.uvik.model.Channels;
 import com.example.uvik.model.GetResponse;
 import com.example.uvik.model.MainModelData;
 import com.example.uvik.model.Officials;
+import com.google.gson.Gson;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
@@ -45,8 +47,6 @@ public class OfficialActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (savedInstanceState!=null)
-            onRestoreInstanceState(savedInstanceState);
         int currentOrientation = this.getResources().getConfiguration().orientation;
         if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE){
             setContentView(R.layout.official_landscape);
@@ -77,6 +77,10 @@ public class OfficialActivity extends AppCompatActivity {
         if (getIntent()!=null){
             data = (GetResponse) getIntent().getSerializableExtra("data");
             modelData = (MainModelData) getIntent().getSerializableExtra("modelData");
+        }
+        if (savedInstanceState!=null){
+            this.data = (GetResponse) savedInstanceState.getSerializable("data");
+            this.modelData = (MainModelData) savedInstanceState.getSerializable("modelData");
         }
         updateView(data,modelData);
         fb.setOnClickListener(new View.OnClickListener() {
@@ -148,6 +152,7 @@ public class OfficialActivity extends AppCompatActivity {
                     Toast.makeText(OfficialActivity.this, "Address not available", Toast.LENGTH_SHORT).show();
             }
         });
+
     }
 
     private void onAddressClick(String addressString) {
@@ -346,8 +351,135 @@ public class OfficialActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onSaveInstanceState(@NonNull Bundle outState, @NonNull PersistableBundle outPersistentState) {
-        super.onSaveInstanceState(outState, outPersistentState);
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putSerializable("data",data);
+        outState.putSerializable("modelData",modelData);
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        TextView officeName = (TextView) findViewById(R.id.office_name);
+        TextView name = (TextView) findViewById(R.id.name);
+        TextView party = (TextView) findViewById(R.id.party);
+        TextView address = (TextView) findViewById(R.id.address);
+        TextView phone = (TextView) findViewById(R.id.phone);
+        TextView email = (TextView) findViewById(R.id.email);
+        TextView website = (TextView) findViewById(R.id.website);
+        LinearLayout websiteL = (LinearLayout) findViewById(R.id.website_l);
+        LinearLayout addressL = (LinearLayout) findViewById(R.id.address_l);
+        LinearLayout phoneL = (LinearLayout) findViewById(R.id.phone_l);
+        LinearLayout emailL = (LinearLayout) findViewById(R.id.email_l);
+        ImageView img = (ImageView) findViewById(R.id.image_view);
+        TextView locationTxt = (TextView) findViewById(R.id.location_text);
+        ImageView youtube = (ImageView) findViewById(R.id.youtube);
+        ImageView googlePlus = (ImageView) findViewById(R.id.googlePlus);
+        ImageView twitter = (ImageView) findViewById(R.id.twitter);
+        ImageView fb = (ImageView) findViewById(R.id.fb);
+        LinearLayout socialL = (LinearLayout) findViewById(R.id.social_media_l);
+        LinearLayout mainL = (LinearLayout) findViewById(R.id.main_l);
+        this.data = (GetResponse) savedInstanceState.getSerializable("data");
+        this.modelData = (MainModelData) savedInstanceState.getSerializable("modelData");
+        locationTxt.setText(data.getNormalizedInput().getCity()+", "+data.getNormalizedInput().getState()+" "+data.getNormalizedInput().getZip());
+        officeName.setText(this.modelData.getOfficeName());
+        name.setText(this.modelData.getOfficialName());
+        party.setText("("+this.modelData.getParty()+")");
+        if (this.modelData.getParty().contains("Democratic")){
+            mainL.setBackgroundColor(getResources().getColor(R.color.purple_500));
+        }else if (this.modelData.getParty().contains("Republican")){
+            mainL.setBackgroundColor(getResources().getColor(R.color.red));
+        }else{
+            mainL.setBackgroundColor(getResources().getColor(R.color.black));
+        }
+        if (data.getOfficials()!=null&&data.getOfficials().size()>0) {
+            for (int i = 0; i < data.getOfficials().size(); i++) {
+                if (this.modelData.getOfficialName().equals(data.getOfficials().get(i).getName())) {
+                    Officials officials = data.getOfficials().get(i);
+                    if (officials.getAddress() != null && officials.getAddress().size() > 0) {
+                        Address addresses = officials.getAddress().get(0);
+                        address.setText(addresses.getLine1() + ", " + (addresses.getLine2() != null ? addresses.getLine2() : "") + ", " + addresses.getCity() + ", " + addresses.getState() + " " + addresses.getZip());
+                        addressString = address.getText().toString();
+                    } else {
+                        address.setText("No Data Provided");
+                    }
+                    if (officials.getPhones() != null && officials.getPhones().size() > 0) {
+                        phone.setText(officials.getPhones().get(0));
+                        phoneString=officials.getPhones().get(0);
+                    } else
+                        phone.setText("No Data Provided");
+                    if (officials.getEmails() != null && officials.getEmails().size() > 0){
+                        email.setText(officials.getEmails().get(0));
+                        emailString=officials.getEmails().get(0);
+                    }else
+                        email.setText("No Data Provided");
+                    if (officials.getUrls()!=null&&officials.getUrls().size()>0) {
+                        website.setText(officials.getUrls().get(0));
+                        websiteString=officials.getUrls().get(0);
+                    }else
+                        website.setText("No Data Provided");
+                    if (officials.getPhotoUrl()!=null){
+                        Picasso picasso = new Picasso.Builder(this).listener(new Picasso.Listener() {
+                            @Override
+                            public void onImageLoadFailed(Picasso picasso, Uri uri, Exception exception) {
+                                // Here we try https if the http image attempt failed
+                                final String changedUrl = officials.getPhotoUrl().replace("http:", "https:");
+                                picasso.load(changedUrl)
+                                        .error(R.drawable.brokenimg)
+                                        .placeholder(R.drawable.placeholder)
+                                        .into(img);
+                                picAvailable=true;
+                                photoUrl = changedUrl;
+                            }
+                        }).build();
+                        picasso.load(officials.getPhotoUrl())
+                                .error(R.drawable.brokenimg)
+                                .placeholder(R.drawable.placeholder)
+                                .into(img);
+                        picAvailable=true;
+                        photoUrl = officials.getPhotoUrl();
+                    }else{
+                        Picasso.get().load(officials.getPhotoUrl())
+                                .error(R.drawable.brokenimg)
+                                .placeholder(R.drawable.missing)
+                                .into(img);
+                    }
+                    if (officials.getChannels()!=null&&officials.getChannels().size()>0){
+                        channelsList = officials.getChannels();
+                        socialL.setVisibility(View.VISIBLE);
+                        for (int j=0;j<officials.getChannels().size();j++){
+                            Channels channels = officials.getChannels().get(j);
+                            switch (channels.getType()){
+                                case "Facebook":
+                                    fb.setVisibility(View.VISIBLE);
+                                    fbId = channels.getId();
+                                    channel = channels;
+                                    break;
+                                case "Twitter":
+                                    twitter.setVisibility(View.VISIBLE);
+                                    twitterId = channels.getId();
+                                    break;
+                                case "YouTube":
+                                    youtube.setVisibility(View.VISIBLE);
+                                    youtubeId = channels.getId();
+                                    break;
+                                case "GooglePlus":
+                                    googlePlus.setVisibility(View.VISIBLE);
+                                    googleId = channels.getId();
+                                    break;
+                            }
+                        }
+                    }else{
+                        socialL.setVisibility(View.GONE);
+                    }
+                }
+            }
+        }
+        updateData(this.data,this.modelData);
+    }
+
+    private void updateData(GetResponse data, MainModelData modelData) {
+
     }
 
     @Override
@@ -355,11 +487,6 @@ public class OfficialActivity extends AppCompatActivity {
         super.onConfigurationChanged(newConfig);
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE){
             setContentView(R.layout.official_landscape);
-            /*if (getIntent()!=null){
-                data = (GetResponse) getIntent().getSerializableExtra("data");
-                modelData = (MainModelData) getIntent().getSerializableExtra("modelData");
-            }
-            updateView(data,modelData);*/
         }else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT){
             setContentView(R.layout.activity_official);
         }
